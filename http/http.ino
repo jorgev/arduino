@@ -8,7 +8,7 @@ byte mac[] = { 0x90, 0xA2, 0xDA, 0x00, 0x8E, 0xC1 };
 byte ip[] = { 192, 168, 1, 120 };
 byte gateway[] = { 192, 168, 1, 254 };
 byte subnet[] = { 255, 255, 255, 0 };
-byte server[] = { 74, 125, 224, 147 };
+byte server[] = { 74, 125, 224, 208 };
 
 http_client client;
 
@@ -25,9 +25,11 @@ void setup()
 void loop()
 {
 	// make a request
-	int ret = client.request(server, 80, "http://www.google.com");
+	int ret = client.request(server, 80, "http://www.google.com/");
+	if (ret != 0)
+		Serial.println(ret);
 
 	// sleep a little before the next request
-	delay(10000);
+	delay(15000);
 }
 

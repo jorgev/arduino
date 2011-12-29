@@ -32,6 +32,7 @@ private:
 private:
 	EthernetClient client;
 	char* response;
+	unsigned int content_length;
 	header_list* request_headers;
 	short http_status_code;
 };

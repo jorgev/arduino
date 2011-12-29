@@ -21,6 +21,14 @@ http_client::~http_client()
 
 int http_client::request(byte* server, unsigned short port, const char* url, const char* method, const char* data)
 {
+	// clear out any old response that may be hanging around
+	if (response != NULL)
+	{
+		free(response);
+		response = NULL;
+		content_length = 0;
+	}
+
 	// validate/parse the url
 	size_t len = strlen(url);
 	char* host = (char*) malloc(len); // allocate string for host
@@ -28,14 +36,25 @@ int http_client::request(byte* server, unsigned short port, const char* url, con
 		return OUT_OF_MEMORY;
 	char* path = (char*) malloc(len); // allocate string for path
 	if (path == NULL)
+	{
+		free(host);
 		return OUT_OF_MEMORY;
+	}
 	int ret = parse_url(url, host, path);
 	if (ret != SUCCESS)
+	{
+		free(host);
+		free(path);
 		return ret;
+	}
 	
 	// make the connection
 	if (!client.connect(server, port))
+	{
+		free(host);
+		free(path);
 		return CONNECTION_FAILED;
+	}
 	
 	// default method is GET
 	if (method == NULL)
@@ -55,15 +74,16 @@ int http_client::request(byte* server, unsigned short port, const char* url, con
 		client.println(header_buffer);
 		Serial.println(header_buffer);
 	}
-	client.println("");
+	client.println();
 
 	// send up data, if we have any
 	if (data != NULL)
-		client.println(data);
+		client.print(data);
 	
 	// now get the response
 	char* p = header_buffer;
 	bool in_headers = true;
+	content_length = 0;
 	while (client.available())
 	{
 		char c = client.read();
@@ -82,11 +102,24 @@ int http_client::request(byte* server, unsigned short port, const char* url, con
 				{
 					// if this is an empty line, we've reached the end of the headers
 					in_headers = false;
+					
+					// set our pointer to the response buffer, which should have been allocated already
+					p = response;
 				}
 				else
 				{
 					// this is a header, certain ones are interesting to us
 					Serial.println(header_buffer);
+
+					// convert header name to lower case for comparison
+					char* ph = header_buffer;
+					while (*ph && *ph != ':')
+						*ph = tolower(*ph);
+					if (strstr(header_buffer, "content-length:") != NULL)
+					{
+						content_length = atoi(ph + 2);
+						response = (char*) malloc(content_length);
+					}
 				}
 
 				// reset the pointer for the next header
@@ -101,6 +134,7 @@ int http_client::request(byte* server, unsigned short port, const char* url, con
 		else
 		{
 			// everything else gets appended to the response body
+			*p++ = c;
 		}
 	}
 
