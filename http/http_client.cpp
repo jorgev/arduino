@@ -19,7 +19,7 @@ http_client::~http_client()
 	free_headers();
 }
 
-int http_client::request(byte* server, unsigned short port, const char* url, const char* method, const char* data)
+int http_client::request(byte server[], unsigned short port, const char* url, const char* method, const char* data)
 {
 	// clear out any old response that may be hanging around
 	if (response != NULL)
@@ -49,6 +49,7 @@ int http_client::request(byte* server, unsigned short port, const char* url, con
 	}
 	
 	// make the connection
+        EthernetClient client;
 	if (!client.connect(server, port))
 	{
 		free(host);
@@ -68,12 +69,19 @@ int http_client::request(byte* server, unsigned short port, const char* url, con
 	sprintf(header_buffer, "Host: %s", host);
 	client.println(header_buffer);
 	Serial.println(header_buffer);
+	sprintf(header_buffer, "User-Agent: %s", USER_AGENT);
+	client.println(header_buffer);
+	Serial.println(header_buffer);
 	if (data != NULL)
 	{
 		sprintf(header_buffer, "Content-Length: %d", strlen(data));
 		client.println(header_buffer);
 		Serial.println(header_buffer);
 	}
+
+	// send up any additional headers
+
+	// end of headers
 	client.println();
 
 	// send up data, if we have any
