@@ -5,6 +5,8 @@
 
 #define LRQ			2
 #define STROBE		9
+#define RED			10
+#define GREEN		11
 
 byte mac[] = { 0x90, 0xA2, 0xDA, 0x00, 0x8E, 0xC1 };
 byte ip[] = { 172, 22, 4, 120 };
@@ -12,7 +14,7 @@ byte gateway[] = { 172, 22, 0, 1 };
 byte subnet[] = { 255, 255, 0, 0 };
 EthernetServer server(80);
 
-const int BUFSIZE = 1024;
+const int BUFSIZE = 256;
 
 void send_response(EthernetClient& client, int status_code, char* body);
 
@@ -101,6 +103,7 @@ void loop() {
 		while (*p) {
 			// have to wait for the LRQ pin to go high
 			while (analogRead(LRQ) == 0) {
+				Serial.println("Waiting for LRQ...");
 			}
 			
 			// set the analog bits to the right values
