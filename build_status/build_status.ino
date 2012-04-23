@@ -3,10 +3,8 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-#define LRQ			2
-#define STROBE		9
-#define RED			10
-#define GREEN		11
+#define LRQ		10
+#define STROBE		11
 
 byte mac[] = { 0x90, 0xA2, 0xDA, 0x00, 0x8E, 0xC1 };
 byte ip[] = { 172, 22, 4, 120 };
@@ -26,14 +24,20 @@ void setup() {
 	server.begin();
 	Serial.print("server is at ");
 	Serial.println(Ethernet.localIP());
+
+	// initialize the pins
+	digitalWrite(LRQ, HIGH);
+	digitalWrite(STROBE, LOW);
 }
 
 void loop() {
 	EthernetClient client = server.available();
 	if (client) {
 		char* buf = (char*) malloc(BUFSIZE);
-		if (buf == NULL)
+		if (buf == NULL) {
 			Serial.println("*** FAILED TO ALLOCATE BUFFER FOR READ ***");
+			return;
+		}
 		char* p = buf;
 		bool in_headers = true;
 		bool request_line = true;
@@ -97,23 +101,33 @@ void loop() {
 
 		// we're done receiving the data, terminate the buffer, reset our pointer
 		*p = 0;
+		const char* end = p;
 		p = buf;
+		const char* word = p;
 
 		// loop over the command
 		while (*p) {
-			// have to wait for the LRQ pin to go high
-			while (analogRead(LRQ) == 0) {
-				Serial.println("Waiting for LRQ...");
+			if (*p == ' ') {
+				// terminate the word and bump the pointer
+				*p++ = 0;
+
+				// have to wait for the LRQ pin to go high
+				while (analogRead(LRQ) == 0) {
+					Serial.println("Waiting for LRQ...");
+				}
+				
+				// set the analog bits to the right values in order to pronounce the word correctly
+
+				// toggle the strobe pin
+				digitalWrite(STROBE, HIGH);
+				digitalWrite(STROBE, LOW);
+
+				// move to next word
+				word = p;
+			} else {
+				// move to the next character
+				p++;
 			}
-			
-			// set the analog bits to the right values
-
-			// toggle the strobe pin
-			digitalWrite(STROBE, HIGH);
-			digitalWrite(STROBE, LOW);
-
-			// move to the next character
-			p++;
 		}
 
 		// done with the buffer
