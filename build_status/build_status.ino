@@ -3,8 +3,8 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-#define LRQ		10
-#define STROBE		11
+#define LRQ		9
+#define STROBE		8
 
 byte mac[] = { 0x90, 0xA2, 0xDA, 0x00, 0x8E, 0xC1 };
 byte ip[] = { 172, 22, 4, 120 };
@@ -15,6 +15,7 @@ EthernetServer server(80);
 const int BUFSIZE = 256;
 
 void send_response(EthernetClient& client, int status_code, char* body);
+void set_bits(byte data);
 
 void setup() {
 	Serial.begin(9600);
@@ -25,9 +26,16 @@ void setup() {
 	Serial.print("server is at ");
 	Serial.println(Ethernet.localIP());
 
-	// initialize the pins
-	digitalWrite(LRQ, HIGH);
-	digitalWrite(STROBE, LOW);
+	pinMode(STROBE, OUTPUT);
+	pinMode(LRQ, INPUT);
+	pinMode(2, OUTPUT);
+	pinMode(3, OUTPUT);
+	pinMode(4, OUTPUT);
+	pinMode(5, OUTPUT);
+	pinMode(6, OUTPUT);
+	pinMode(7, OUTPUT);
+
+	digitalWrite(STROBE, HIGH);
 }
 
 void loop() {
@@ -83,7 +91,7 @@ void loop() {
 					}
 				} else {
 					*p++ = ch;
-					if ((int) (p - ch) > BUFSIZE) {
+					if ((int) (p - buf) > BUFSIZE) {
 						// out of buffer space, process what we have and reset pointer
 						p = buf;
 					}
@@ -101,7 +109,6 @@ void loop() {
 
 		// we're done receiving the data, terminate the buffer, reset our pointer
 		*p = 0;
-		const char* end = p;
 		p = buf;
 		const char* word = p;
 
@@ -111,16 +118,10 @@ void loop() {
 				// terminate the word and bump the pointer
 				*p++ = 0;
 
-				// have to wait for the LRQ pin to go high
-				while (analogRead(LRQ) == 0) {
-					Serial.println("Waiting for LRQ...");
-				}
-				
-				// set the analog bits to the right values in order to pronounce the word correctly
-
-				// toggle the strobe pin
-				digitalWrite(STROBE, HIGH);
-				digitalWrite(STROBE, LOW);
+				// set the bits to the right values in order to pronounce the word correctly
+				while (*word)
+					set_bits(*word++ - 0x20);
+				set_bits(0);
 
 				// move to next word
 				word = p;
@@ -130,8 +131,20 @@ void loop() {
 			}
 		}
 
+		// turn off
+		set_bits(0);
+
 		// done with the buffer
 		free(buf);
+	}
+
+	if (Serial.available()) {
+		int ch = Serial.read();
+		Serial.write(ch);
+		if (ch == '\r')
+			set_bits(0);
+		else
+			set_bits(ch - 0x20);
 	}
 }
 
@@ -159,5 +172,22 @@ void send_response(EthernetClient& client, int status_code, char* body)
 	// sample code indicates we need this
 	delay(1);
 	client.stop();
+}
+
+void set_bits(byte data)
+{
+	int i;
+
+	while (digitalRead(LRQ) == HIGH) {
+		Serial.println("Waiting for LRQ...");
+	}
+
+	for (i = 0; i < 6; i++) {
+		digitalWrite(2 + i, ((data >> i) & 0x01) ? HIGH : LOW);
+	}
+	Serial.println();
+
+	digitalWrite(STROBE, LOW);
+	digitalWrite(STROBE, HIGH);
 }
 
