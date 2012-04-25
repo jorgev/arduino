@@ -117,7 +117,21 @@ void loop() {
 
 		// loop over the command
 		while (*p) {
-			set_bits(*p++ - 0x20);
+			if (*p >= 'a') {
+				if (*p == 'a')
+					delay(10);
+				else if (*p == 'b')
+					delay(20);
+				else if (*p == 'c')
+					delay(50);
+				else if (*p == 'd')
+					delay(100);
+				else if (*p == 'e')
+					delay(200);
+			} else {
+				set_bits(*p - 0x20);
+			}
+			p++;
 		}
 
 		// turn off
