@@ -26,6 +26,7 @@ void setup() {
 	Serial.print("server is at ");
 	Serial.println(Ethernet.localIP());
 
+	// designate the input/output pins
 	pinMode(STROBE, OUTPUT);
 	pinMode(LRQ, INPUT);
 	pinMode(2, OUTPUT);
@@ -35,6 +36,7 @@ void setup() {
 	pinMode(6, OUTPUT);
 	pinMode(7, OUTPUT);
 
+	// set strobe high, we will monitor on it for sending data
 	digitalWrite(STROBE, HIGH);
 }
 
@@ -43,6 +45,7 @@ void loop() {
 	if (client) {
 		char* buf = (char*) malloc(BUFSIZE);
 		if (buf == NULL) {
+			// no sense in doing anything else if we can't allocate buffer
 			Serial.println("*** FAILED TO ALLOCATE BUFFER FOR READ ***");
 			return;
 		}
@@ -114,21 +117,7 @@ void loop() {
 
 		// loop over the command
 		while (*p) {
-			if (*p == ' ') {
-				// terminate the word and bump the pointer
-				*p++ = 0;
-
-				// set the bits to the right values in order to pronounce the word correctly
-				while (*word)
-					set_bits(*word++ - 0x20);
-				set_bits(0);
-
-				// move to next word
-				word = p;
-			} else {
-				// move to the next character
-				p++;
-			}
+			set_bits(*p++ - 0x20);
 		}
 
 		// turn off
