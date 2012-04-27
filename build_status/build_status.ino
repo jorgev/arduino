@@ -3,18 +3,23 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-#define LRQ		9
+#define LRQ			9
 #define STROBE		8
+#define PING		7
 
 byte mac[] = { 0x90, 0xA2, 0xDA, 0x00, 0x8E, 0xC1 };
 byte ip[] = { 172, 22, 4, 120 };
 byte gateway[] = { 172, 22, 0, 1 };
 byte subnet[] = { 255, 255, 0, 0 };
+bool near = false;
 EthernetServer server(80);
 
 const int BUFSIZE = 256;
+char buf[BUFSIZE];
+char last_message[BUFSIZE] = {0};
 
 void send_response(EthernetClient& client, int status_code, char* body);
+void say_message(const char* pb);
 void set_bits(byte data);
 
 void setup() {
@@ -43,12 +48,6 @@ void setup() {
 void loop() {
 	EthernetClient client = server.available();
 	if (client) {
-		char* buf = (char*) malloc(BUFSIZE);
-		if (buf == NULL) {
-			// no sense in doing anything else if we can't allocate buffer
-			Serial.println("*** FAILED TO ALLOCATE BUFFER FOR READ ***");
-			return;
-		}
 		char* p = buf;
 		bool in_headers = true;
 		bool request_line = true;
@@ -113,34 +112,31 @@ void loop() {
 		// we're done receiving the data, terminate the buffer, reset our pointer
 		*p = 0;
 		p = buf;
-		const char* word = p;
-
-		// loop over the command
-		while (*p) {
-			if (*p >= 'a') {
-				if (*p == 'a')
-					delay(10);
-				else if (*p == 'b')
-					delay(20);
-				else if (*p == 'c')
-					delay(50);
-				else if (*p == 'd')
-					delay(100);
-				else if (*p == 'e')
-					delay(200);
-			} else {
-				set_bits(*p - 0x20);
-			}
-			p++;
-		}
-
-		// turn off
-		set_bits(0);
-
-		// done with the buffer
-		free(buf);
+		say_message(p);
+		strcpy(last_message, p);
 	}
 
+	// check proximity
+	digitalWrite(PING, LOW);
+	delayMicroseconds(2);
+	digitalWrite(PING, HIGH);
+	delayMicroseconds(5);
+	digitalWrite(PING, LOW);
+	pinMode(PING, INPUT);
+	long duration = pulseIn(PING, HIGH);
+	pinMode(PING, OUTPUT);
+	long inches = (duration / 74 / 2);
+	if (inches < 20 && !near) {
+		set_bits(0x2a);
+		set_bits(0x2d);
+		set_bits(0x14);
+		set_bits(0);
+		near = true;
+	} else if (inches >= 20) {
+		near = false;
+	}
+
+	// check for data on the serial port
 	if (Serial.available()) {
 		int ch = Serial.read();
 		Serial.write(ch);
@@ -175,6 +171,31 @@ void send_response(EthernetClient& client, int status_code, char* body)
 	// sample code indicates we need this
 	delay(1);
 	client.stop();
+}
+
+void say_message(const char* p)
+{
+	// loop over the command
+	while (*p) {
+		if (*p >= 'a') {
+			if (*p == 'a')
+				delay(10);
+			else if (*p == 'b')
+				delay(20);
+			else if (*p == 'c')
+				delay(50);
+			else if (*p == 'd')
+				delay(100);
+			else if (*p == 'e')
+				delay(200);
+		} else {
+			set_bits(*p - 0x20);
+		}
+		p++;
+	}
+
+	// turn off
+	set_bits(0);
 }
 
 void set_bits(byte data)
