@@ -51,7 +51,7 @@ void loop() {
 		char* p = buf;
 		bool in_headers = true;
 		bool request_line = true;
-		int content_length = 0;
+		int content_length = -1;
 		int status_code = 200;
 		while (client.connected()) {
 			if (client.available()) {
@@ -78,8 +78,11 @@ void loop() {
 							if (strlen(buf) == 0) {
 								in_headers = false;
 								
-								// if this is a request without a body, respond immediately and close
-								if (content_length == 0) {
+								// if content length not supplied, or this is a request without a body, respond immediately and close
+								if (content_length == -1) {
+									send_response(client, 411, NULL);
+									break;
+								} else if (content_length == 0) {
 									send_response(client, status_code, NULL);
 									break;
 								}
@@ -117,6 +120,7 @@ void loop() {
 	}
 
 	// check proximity
+	pinMode(PING, OUTPUT);
 	digitalWrite(PING, LOW);
 	delayMicroseconds(2);
 	digitalWrite(PING, HIGH);
@@ -124,13 +128,10 @@ void loop() {
 	digitalWrite(PING, LOW);
 	pinMode(PING, INPUT);
 	long duration = pulseIn(PING, HIGH);
-	pinMode(PING, OUTPUT);
 	long inches = (duration / 74 / 2);
+	pinMode(PING, OUTPUT);
 	if (inches < 20 && !near) {
-		set_bits(0x2a);
-		set_bits(0x2d);
-		set_bits(0x14);
-		set_bits(0);
+		say_message(last_message);
 		near = true;
 	} else if (inches >= 20) {
 		near = false;
@@ -155,6 +156,8 @@ void send_response(EthernetClient& client, int status_code, char* body)
 	}
 	else if (status_code == 405) {
 		client.println("HTTP/1.1 405 Method Not Allowed");
+	else if (status_code == 411) {
+		client.println("HTTP/1.1 411 Length Required");
 	}
 	client.println("Server: arduino/1.0");
 	int content_length = 0;
