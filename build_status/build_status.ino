@@ -60,6 +60,9 @@ void loop() {
         char* p = buf;
         bool in_headers = true;
         bool request_line = true;
+        bool chunked = false;
+        int chunked_size = -1;
+        int chunked_count = 0;
         int content_length = -1;
         int status_code = 200;
         while (client.connected()) {
@@ -81,17 +84,17 @@ void loop() {
                             // the content length is probably the most important header
                             if (strncmp(buf, "Content-Length: ", 16) == 0) {
                                 content_length = atoi(buf + 16);
+                            } else if (strncmp(buf, "Transfer-Encoding: ", 19) == 0) {
+                                // assume chunked, not sure if there is another valid value
+                                chunked = true;
                             }
                             
                             // if we got a blank line, we're out of the headers
                             if (strlen(buf) == 0) {
                                 in_headers = false;
                                 
-                                // if content length not supplied, or this is a request without a body, respond immediately and close
-                                if (content_length == -1) {
-                                    send_response(client, 411, NULL);
-                                    break;
-                                } else if (content_length == 0) {
+                                // if content length is 0, nothing left to do
+                                if (content_length == 0) {
                                     send_response(client, status_code, NULL);
                                     break;
                                 }
@@ -106,10 +109,14 @@ void loop() {
                 } else {
                     *p++ = ch;
                     if ((int) (p - buf) > BUFSIZE) {
-                        // out of buffer space, process what we have and reset pointer
+                        // TODO: out of buffer space, process what we have and reset pointer
                         p = buf;
                     }
-                    if (--content_length == 0) {
+
+                    if (chunked) {
+                        if (ch == '\n') {
+                        }
+                    } else if (--content_length == 0) {
                         // send the response and break out of the receive loop
                         send_response(client, status_code, NULL);
                         break;
@@ -182,8 +189,6 @@ void send_response(EthernetClient& client, int status_code, char* body)
         client.println("HTTP/1.1 200 OK");
     } else if (status_code == 405) {
         client.println("HTTP/1.1 405 Method Not Allowed");
-    } else if (status_code == 411) {
-        client.println("HTTP/1.1 411 Length Required");
     }
     client.println("Server: arduino/1.0");
     int content_length = 0;
