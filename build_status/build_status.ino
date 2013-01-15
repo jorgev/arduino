@@ -6,6 +6,8 @@
 #define LRQ         9
 #define STROBE      8
 #define PING        7
+#define NEAR        6
+#define FAR         5
 #define DATA        3
 #define STAGE       4
 #define NEAR_DISTANCE_COUNT 10
@@ -42,10 +44,14 @@ void setup() {
     pinMode(LRQ, INPUT);
     pinMode(3, OUTPUT);
     pinMode(4, OUTPUT);
+    pinMode(5, OUTPUT);
+    pinMode(6, OUTPUT);
     pinMode(7, OUTPUT);
 
     // set strobe high, we will monitor on it for sending data
     digitalWrite(STROBE, HIGH);
+    digitalWrite(NEAR, HIGH);
+    digitalWrite(FAR, LOW);
 }
 
 void loop() {
@@ -59,7 +65,7 @@ void loop() {
         while (client.connected()) {
             if (client.available()) {
                 char ch = client.read();
-                Serial.write(ch);
+                //Serial.write(ch);
                 if (in_headers) {
                     if (ch == '\n') {
                         // end of line, process it
@@ -113,7 +119,7 @@ void loop() {
         }
 
         // add a carriage return to separate the requests
-        Serial.println();
+        //Serial.println();
 
         // we're done receiving the data, terminate the buffer, reset our pointer
         *p = 0;
@@ -133,7 +139,7 @@ void loop() {
     long duration = pulseIn(PING, HIGH);
     long inches = (duration / 74 / 2);
     //Serial.println(inches);
-    pinMode(PING, OUTPUT);
+    //pinMode(PING, OUTPUT);
     if (inches < 24) {
         if (near_count > 0) {
             near_count--;
@@ -147,17 +153,23 @@ void loop() {
     }
     
     if (near_count == 0 && !is_near) {
-        say_message(last_message);
         is_near = true;
+        Serial.println("Object is near");
+        digitalWrite(NEAR, LOW);
+        digitalWrite(FAR, HIGH);
+        say_message(last_message);
     }
     if (far_count == 0 && is_near) {
         is_near = false;
+        Serial.println("Object is far");
+        digitalWrite(FAR, LOW);
+        digitalWrite(NEAR, HIGH);
     }
 
     // check for data on the serial port
     if (Serial.available()) {
         int ch = Serial.read();
-        Serial.write(ch);
+        //Serial.write(ch);
         if (ch == 'r')
             say_message(last_message);
     }
@@ -222,12 +234,12 @@ void set_bits(byte data)
     int mask = 0x20;
     for (i = 0; i < 6; i++) {
         digitalWrite(DATA, (data & mask) ? HIGH : LOW);
-        Serial.print(data & mask);
+        //Serial.print(data & mask);
         mask >>= 1;
         digitalWrite(STAGE, HIGH);
         digitalWrite(STAGE, LOW);
     }
-    Serial.println();
+    //Serial.println();
 
     while (digitalRead(LRQ) == HIGH) {
         // waiting for LRQ
