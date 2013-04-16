@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 items = map(str.rstrip,open('allophones.txt','r').readlines())
 a2ch = dict(zip(items,map(chr,range(32,32+len(items)))))
