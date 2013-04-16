@@ -131,8 +131,10 @@ void loop() {
         // we're done receiving the data, terminate the buffer, reset our pointer
         *p = 0;
         p = buf;
-        say_message(p);
-        strcpy(last_message, p);
+        if (strlen(p) > 0) {
+            say_message(p);
+            strcpy(last_message, p);
+        }
     }
 
     // check proximity
