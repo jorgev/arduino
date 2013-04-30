@@ -24,7 +24,7 @@ bool is_near = false;
 
 const int BUFSIZE = 256;
 char buf[BUFSIZE];
-char last_message[BUFSIZE] = {0};
+char last_message[BUFSIZE] = "Ed:M\"N3\")M'4\"4\"D40"; // shall we play a game?
 
 void send_response(EthernetClient& client, int status_code, char* body);
 void say_message(const char* pb);
