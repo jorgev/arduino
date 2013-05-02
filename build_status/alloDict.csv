@@ -28,6 +28,7 @@ clock,KK1 LL AA AA PA3 KK2
 clown,KK1 LL AW NN1
 cognitive,KK3 AA AA GG3 NN1 IH PA3 TT2 IH VV
 collide,KK3 AX LL AY DD1
+comes,KK3 AX AX MM ZZ
 computer,KK1 AX MM PP YY1 UW1 TT2 ER1
 cookie,KK3 UH KK1 IY
 coop,KK3 UW2 PA3 PP
@@ -92,7 +93,9 @@ gauged,GG1 EY PA2 JH PA2 DD1
 gauges,GG1 EY PA2 JH IH ZZ
 gauging,GG1 EY PA2 JH IH NG
 h,EY PA2 PA3 CH
+hammer,HH2 AE MM ER1
 hello,HH2 EH LL AX OW
+here,HH2 YR
 hour,AW ER1
 hundred,HH2 AX AX NN1 PA2 DD2 RR2 IH IH PA1 DD1
 i,AA AY
