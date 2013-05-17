@@ -2,6 +2,7 @@
 
 #include <SPI.h>
 #include <Ethernet.h>
+#include "IRremote.h"
 
 #define LRQ         9
 #define STROBE      8
@@ -10,6 +11,7 @@
 #define FAR         5
 #define DATA        3
 #define STAGE       4
+#define IR_RECV     10
 #define NEAR_DISTANCE_COUNT 10
 #define FAR_DISTANCE_COUNT 100
 
@@ -22,6 +24,9 @@ int near_count = NEAR_DISTANCE_COUNT;
 int far_count = FAR_DISTANCE_COUNT;
 bool is_near = false;
 
+IRrecv irrecv(IR_RECV);
+decode_results results;
+
 const int BUFSIZE = 256;
 char buf[BUFSIZE];
 char last_message[BUFSIZE] = "Ed:M\"N3\")M'4\"4\"D40"; // shall we play a game?
@@ -32,6 +37,9 @@ void set_bits(byte data);
 
 void setup() {
     Serial.begin(9600);
+
+    // set up the IR receiver
+    irrecv.enableIRIn();
 
     // set up ethernet
     Ethernet.begin(mac, ip, gateway, subnet);
@@ -173,6 +181,11 @@ void loop() {
         Serial.println("Object is far");
         digitalWrite(FAR, LOW);
         digitalWrite(NEAR, HIGH);
+    }
+
+    // check for IR signal
+    if (irrecv.decode(&results)) {
+        irrecv.resume();
     }
 
     // check for data on the serial port
