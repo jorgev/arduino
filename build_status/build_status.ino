@@ -11,7 +11,7 @@
 #define FAR         5
 #define DATA        3
 #define STAGE       4
-#define IR_RECV     10
+#define IR_RECV     11
 #define NEAR_DISTANCE_COUNT 10
 #define FAR_DISTANCE_COUNT 100
 
@@ -185,6 +185,7 @@ void loop() {
 
     // check for IR signal
     if (irrecv.decode(&results)) {
+        Serial.println(results.value, HEX);
         irrecv.resume();
     }
 
