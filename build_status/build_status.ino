@@ -34,6 +34,7 @@ char last_message[BUFSIZE] = "Ed:M\"N3\")M'4\"4\"D40"; // shall we play a game?
 char* hammer = "/d\"\"\"Ue\"\"\"/d\"\"\"Ue\"\"\"Y\\\"(//0K\"2//\"Y:0S";
 char* djeat = "*3-";
 char* squeat = "WJ63-";
+char* shesaid = "2:-W\"N/1\"E3\"WW''5";
 
 void send_response(EthernetClient& client, int status_code, char* body);
 void say_message(const char* pb);
@@ -212,6 +213,10 @@ void loop() {
 
             case 0xa10: // #6
                 say_message(hammer);
+                break;
+
+            case 0x110: // #9
+                say_message(shesaid);
                 break;
 
             case 0xd10: // Enter
