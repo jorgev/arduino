@@ -35,6 +35,8 @@ char* hammer = "/d\"\"\"Ue\"\"\"/d\"\"\"Ue\"\"\"Y\\\"(//0K\"2//\"Y:0S";
 char* djeat = "*3-";
 char* squeat = "WJ63-";
 char* shesaid = "2:-W\"N/1\"E3\"WW''5";
+char* yousaid = "Q?\"WW''5\",\"-\"0::+";
+char* jesus = "X/U<77A3\"H//IWW\"N,=\"2//\"*3K/W";
 
 void send_response(EthernetClient& client, int status_code, char* body);
 void say_message(const char* pb);
@@ -209,6 +211,14 @@ void loop() {
 
             case 0x810: // #2
                 say_message(squeat);
+                break;
+
+            case 0x410: // #3
+                say_message(yousaid);
+                break;
+
+            case 0xc10: // #4
+                say_message(jesus);
                 break;
 
             case 0xa10: // #6
