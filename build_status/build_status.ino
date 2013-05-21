@@ -210,6 +210,9 @@ void loop() {
                 say_message(hammer);
                 break;
 
+            case 0xd10: // Enter
+                break;
+
             case 0xdd0: // prev ch
                 say_message(last_message);
                 break;
