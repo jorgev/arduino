@@ -23,6 +23,7 @@ EthernetServer server(80);
 int near_count = NEAR_DISTANCE_COUNT;
 int far_count = FAR_DISTANCE_COUNT;
 bool is_near = false;
+int last_inches = -1;
 
 IRrecv irrecv(IR_RECV);
 decode_results results;
@@ -30,6 +31,8 @@ decode_results results;
 const int BUFSIZE = 256;
 char buf[BUFSIZE];
 char last_message[BUFSIZE] = "Ed:M\"N3\")M'4\"4\"D40"; // shall we play a game?
+char* hammer = "/d\"\"\"Ue\"\"\"/d\"\"\"Ue\"\"\"Y\\\"(//0K\"2//\"Y:0S";
+char* djeat = "*3-";
 
 void send_response(EthernetClient& client, int status_code, char* body);
 void say_message(const char* pb);
@@ -154,7 +157,12 @@ void loop() {
     digitalWrite(PING, LOW);
     pinMode(PING, INPUT);
     long duration = pulseIn(PING, HIGH);
-    long inches = (duration / 74 / 2);
+    long inches = (duration / 74);
+    if (last_inches != -1) {
+        int delta = inches - last_inches;
+        inches = last_inches + max(min(delta / 8, 2), -2);
+    }
+    last_inches = inches;
     //Serial.println(inches);
     //pinMode(PING, OUTPUT);
     if (inches < 24) {
@@ -168,18 +176,20 @@ void loop() {
             near_count = NEAR_DISTANCE_COUNT;
         }
     }
+    int val = map(inches, 1, 120, 0, 255);
+    val = constrain(val, 0, 255);
+    analogWrite(FAR, val);
+    delay(10);
     
     if (near_count == 0 && !is_near) {
         is_near = true;
         Serial.println("Object is near");
         digitalWrite(NEAR, LOW);
-        digitalWrite(FAR, HIGH);
         say_message(last_message);
     }
     if (far_count == 0 && is_near) {
         is_near = false;
         Serial.println("Object is far");
-        digitalWrite(FAR, LOW);
         digitalWrite(NEAR, HIGH);
     }
 
@@ -187,6 +197,25 @@ void loop() {
     if (irrecv.decode(&results)) {
         Serial.println(results.value, HEX);
         irrecv.resume();
+        switch (results.value) {
+            case 0x10:
+                say_message(djeat);
+                break;
+
+            case 0xa10:
+                say_message(hammer);
+                break;
+
+            default:
+                Serial.print("Unhandled code: ");
+                Serial.println(results.value, HEX);
+                break;
+        }
+
+        // dump out any remaining signals
+        while (irrecv.decode(&results)) {
+            irrecv.resume();
+        }
     }
 
     // check for data on the serial port
