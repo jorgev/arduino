@@ -196,19 +196,22 @@ void loop() {
 
     // check for IR signal
     if (irrecv.decode(&results)) {
-        Serial.println(results.value, HEX);
         irrecv.resume();
         switch (results.value) {
-            case 0x10:
+            case 0x10: // #1
                 say_message(djeat);
                 break;
 
-            case 0x810:
+            case 0x810: // #2
                 say_message(squeat);
                 break;
 
-            case 0xa10:
+            case 0xa10: // #6
                 say_message(hammer);
+                break;
+
+            case 0xdd0: // prev ch
+                say_message(last_message);
                 break;
 
             default:
