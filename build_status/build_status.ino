@@ -198,6 +198,10 @@ void loop() {
     if (irrecv.decode(&results)) {
         irrecv.resume();
         switch (results.value) {
+            case -1:
+                // bad signal, ignoring
+                break;
+
             case 0x10: // #1
                 say_message(djeat);
                 break;
