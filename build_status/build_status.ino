@@ -203,6 +203,7 @@ void loop() {
         switch (results.value) {
             case -1:
                 // bad signal, ignoring
+                Serial.println("Bad signal");
                 break;
 
             case 0x10: // #1
