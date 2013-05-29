@@ -2,7 +2,6 @@
 
 #include <SPI.h>
 #include <Ethernet.h>
-#include "IRremote.h"
 
 #define LRQ         9
 #define STROBE      8
@@ -14,6 +13,8 @@
 #define IR_RECV     11
 #define NEAR_DISTANCE_COUNT 10
 #define FAR_DISTANCE_COUNT 100
+#define BIN1        1000
+#define BIN0        400
 
 byte mac[] = { 0x90, 0xA2, 0xDA, 0x00, 0x8E, 0xC1 };
 byte ip[] = { 172, 22, 4, 120 };
@@ -24,9 +25,6 @@ int near_count = NEAR_DISTANCE_COUNT;
 int far_count = FAR_DISTANCE_COUNT;
 bool is_near = false;
 int last_inches = -1;
-
-IRrecv irrecv(IR_RECV);
-decode_results results;
 
 const int BUFSIZE = 256;
 char buf[BUFSIZE];
@@ -45,9 +43,6 @@ void set_bits(byte data);
 void setup() {
     Serial.begin(9600);
 
-    // set up the IR receiver
-    irrecv.enableIRIn();
-
     // set up ethernet
     Ethernet.begin(mac, ip, gateway, subnet);
     server.begin();
@@ -62,6 +57,7 @@ void setup() {
     pinMode(5, OUTPUT);
     pinMode(6, OUTPUT);
     pinMode(7, OUTPUT);
+    pinMode(IR_RECV, INPUT);
 
     // set strobe high, we will monitor on it for sending data
     digitalWrite(STROBE, HIGH);
@@ -198,54 +194,53 @@ void loop() {
     }
 
     // check for IR signal
-    if (irrecv.decode(&results)) {
-        irrecv.resume();
-        switch (results.value) {
-            case -1:
-                // bad signal, ignoring
-                Serial.println("Bad signal");
-                break;
+    if (digitalRead(IR_RECV) == LOW) {
+        while (pulseIn(IR_RECV, LOW) < 2200)
+            ;
+        int i, val, result = 0;
+        for (i = 0; i < 12; i++) {
+            val = pulseIn(IR_RECV, LOW);
+            if (val > 1000) {
+                result |= 1 << i;
+            }
+        }
 
-            case 0x10: // #1
+        switch (result) {
+            case 0x80: // #1
                 say_message(djeat);
                 break;
 
-            case 0x810: // #2
+            case 0x81: // #2
                 say_message(squeat);
                 break;
 
-            case 0x410: // #3
+            case 0x82: // #3
                 say_message(yousaid);
                 break;
 
-            case 0xc10: // #4
+            case 0x83: // #4
                 say_message(jesus);
                 break;
 
-            case 0xa10: // #6
+            case 0x85: // #6
                 say_message(hammer);
                 break;
 
-            case 0x110: // #9
+            case 0x88: // #9
                 say_message(shesaid);
                 break;
 
-            case 0xd10: // Enter
+            case 0x8B: // Enter
                 break;
 
-            case 0xdd0: // prev ch
+            case 0xBB: // prev ch
                 say_message(last_message);
                 break;
 
             default:
                 Serial.print("Unhandled code: ");
-                Serial.println(results.value, HEX);
+                Serial.println(result, HEX);
                 break;
-        }
-
-        // dump out any remaining signals
-        while (irrecv.decode(&results)) {
-            irrecv.resume();
         }
     }
 
