@@ -195,16 +195,19 @@ void loop() {
 
     // check for IR signal
     if (digitalRead(IR_RECV) == LOW) {
+        // wait for a start bit
         while (pulseIn(IR_RECV, LOW) < 2200)
             ;
-        int i, val, result = 0;
+
+        // loop and set bits as needed
+        int i, result = 0;
         for (i = 0; i < 12; i++) {
-            val = pulseIn(IR_RECV, LOW);
-            if (val > 1000) {
+            if (pulseIn(IR_RECV, LOW) > 1000) {
                 result |= 1 << i;
             }
         }
 
+        // do something based on the code received
         switch (result) {
             case 0x80: // #1
                 say_message(djeat);
