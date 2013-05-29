@@ -10,7 +10,7 @@
 #define FAR         5
 #define DATA        3
 #define STAGE       4
-#define IR_RECV     11
+#define IR_RECV     2
 #define NEAR_DISTANCE_COUNT 10
 #define FAR_DISTANCE_COUNT 100
 #define BIN1        1000
@@ -35,6 +35,7 @@ char* squeat = "WJ63-";
 char* shesaid = "2:-W\"N/1\"E3\"WW''5";
 char* yousaid = "Q?\"WW''5\",\"-\"0::+";
 char* jesus = "X/U<77A3\"H//IWW\"N,=\"2//\"*3K/W";
+char* notapussy = "9''WW\"\"\"8&\":0\"77MWWU\"X88-\"4\")//WW4";
 
 void send_response(EthernetClient& client, int status_code, char* body);
 void say_message(const char* pb);
@@ -231,6 +232,10 @@ void loop() {
 
             case 0x88: // #9
                 say_message(shesaid);
+                break;
+
+            case 0x89: // #0
+                say_message(notapussy);
                 break;
 
             case 0x8B: // Enter
