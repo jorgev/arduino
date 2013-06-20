@@ -197,8 +197,12 @@ void loop() {
     // check for IR signal
     if (digitalRead(IR_RECV) == LOW) {
         // wait for a start bit
-        while (pulseIn(IR_RECV, LOW) < 2200)
-            ;
+        unsigned long ret = pulseIn(IR_RECV, LOW, 100000);
+        while (ret < 2200) {
+            if (ret == 0)
+                break;
+            ret = pulseIn(IR_RECV, LOW, 100000);
+        }
 
         // loop and set bits as needed
         int i, result = 0;
