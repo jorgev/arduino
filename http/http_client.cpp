@@ -11,206 +11,206 @@ http_client::http_client()
 
 http_client::~http_client()
 {
-	// free the response if we have one
-	if (response != NULL)
-		free(response);
+    // free the response if we have one
+    if (response != NULL)
+        free(response);
 
-	// clean up any leftover headers
-	free_headers();
+    // clean up any leftover headers
+    free_headers();
 }
 
 int http_client::request(byte server[], unsigned short port, const char* url, const char* method, const char* data)
 {
-	// clear out any old response that may be hanging around
-	if (response != NULL)
-	{
-		free(response);
-		response = NULL;
-		content_length = 0;
-	}
+    // clear out any old response that may be hanging around
+    if (response != NULL)
+    {
+        free(response);
+        response = NULL;
+        content_length = 0;
+    }
 
-	// validate/parse the url
-	size_t len = strlen(url);
-	char* host = (char*) malloc(len); // allocate string for host
-	if (host == NULL)
-		return OUT_OF_MEMORY;
-	char* path = (char*) malloc(len); // allocate string for path
-	if (path == NULL)
-	{
-		free(host);
-		return OUT_OF_MEMORY;
-	}
-	int ret = parse_url(url, host, path);
-	if (ret != SUCCESS)
-	{
-		free(host);
-		free(path);
-		return ret;
-	}
-	
-	// make the connection
+    // validate/parse the url
+    size_t len = strlen(url);
+    char* host = (char*) malloc(len); // allocate string for host
+    if (host == NULL)
+        return OUT_OF_MEMORY;
+    char* path = (char*) malloc(len); // allocate string for path
+    if (path == NULL)
+    {
+        free(host);
+        return OUT_OF_MEMORY;
+    }
+    int ret = parse_url(url, host, path);
+    if (ret != SUCCESS)
+    {
+        free(host);
+        free(path);
+        return ret;
+    }
+    
+    // make the connection
         EthernetClient client;
-	if (!client.connect(server, port))
-	{
-		free(host);
-		free(path);
-		return CONNECTION_FAILED;
-	}
-	
-	// default method is GET
-	if (method == NULL)
-		method = "GET";
-	
-	// send up our request
-	char header_buffer[1024];
-	sprintf(header_buffer, "%s %s HTTP/1.0", method, path); // don't even think about 1.1
-	client.println(header_buffer);
-	Serial.println(header_buffer);
-	sprintf(header_buffer, "Host: %s", host);
-	client.println(header_buffer);
-	Serial.println(header_buffer);
-	sprintf(header_buffer, "User-Agent: %s", USER_AGENT);
-	client.println(header_buffer);
-	Serial.println(header_buffer);
-	if (data != NULL)
-	{
-		sprintf(header_buffer, "Content-Length: %d", strlen(data));
-		client.println(header_buffer);
-		Serial.println(header_buffer);
-	}
+    if (!client.connect(server, port))
+    {
+        free(host);
+        free(path);
+        return CONNECTION_FAILED;
+    }
+    
+    // default method is GET
+    if (method == NULL)
+        method = "GET";
+    
+    // send up our request
+    char header_buffer[1024];
+    sprintf(header_buffer, "%s %s HTTP/1.0", method, path); // don't even think about 1.1
+    client.println(header_buffer);
+    Serial.println(header_buffer);
+    sprintf(header_buffer, "Host: %s", host);
+    client.println(header_buffer);
+    Serial.println(header_buffer);
+    sprintf(header_buffer, "User-Agent: %s", USER_AGENT);
+    client.println(header_buffer);
+    Serial.println(header_buffer);
+    if (data != NULL)
+    {
+        sprintf(header_buffer, "Content-Length: %d", strlen(data));
+        client.println(header_buffer);
+        Serial.println(header_buffer);
+    }
 
-	// send up any additional headers
+    // send up any additional headers
 
-	// end of headers
-	client.println();
+    // end of headers
+    client.println();
 
-	// send up data, if we have any
-	if (data != NULL)
-		client.print(data);
-	
-	// now get the response
-	char* p = header_buffer;
-	bool in_headers = true;
-	content_length = 0;
-	while (client.available())
-	{
-		char c = client.read();
-		if (in_headers)
-		{
-			// header end in CRLF, so we'll ignore CR and process the line on LF
-			if (c == '\r')
-			{
-				// ignore and wait for linefeed
-			}
-			else if (c == '\n')
-			{
-				// terminate the string and see if we have a header or the body is starting
-				*p = 0;
-				if (strlen(header_buffer) == 0)
-				{
-					// if this is an empty line, we've reached the end of the headers
-					in_headers = false;
-					
-					// set our pointer to the response buffer, which should have been allocated already
-					p = response;
-				}
-				else
-				{
-					// this is a header, certain ones are interesting to us
-					Serial.println(header_buffer);
+    // send up data, if we have any
+    if (data != NULL)
+        client.print(data);
+    
+    // now get the response
+    char* p = header_buffer;
+    bool in_headers = true;
+    content_length = 0;
+    while (client.available())
+    {
+        char c = client.read();
+        if (in_headers)
+        {
+            // header end in CRLF, so we'll ignore CR and process the line on LF
+            if (c == '\r')
+            {
+                // ignore and wait for linefeed
+            }
+            else if (c == '\n')
+            {
+                // terminate the string and see if we have a header or the body is starting
+                *p = 0;
+                if (strlen(header_buffer) == 0)
+                {
+                    // if this is an empty line, we've reached the end of the headers
+                    in_headers = false;
+                    
+                    // set our pointer to the response buffer, which should have been allocated already
+                    p = response;
+                }
+                else
+                {
+                    // this is a header, certain ones are interesting to us
+                    Serial.println(header_buffer);
 
-					// convert header name to lower case for comparison
-					char* ph = header_buffer;
-					while (*ph && *ph != ':')
-						*ph = tolower(*ph);
-					if (strstr(header_buffer, "content-length:") != NULL)
-					{
-						content_length = atoi(ph + 2);
-						response = (char*) malloc(content_length);
-					}
-				}
+                    // convert header name to lower case for comparison
+                    char* ph = header_buffer;
+                    while (*ph && *ph != ':')
+                        *ph = tolower(*ph);
+                    if (strstr(header_buffer, "content-length:") != NULL)
+                    {
+                        content_length = atoi(ph + 2);
+                        response = (char*) malloc(content_length);
+                    }
+                }
 
-				// reset the pointer for the next header
-				p = header_buffer;
-			}
-			else
-			{
-				// otherwise, this is just part of a header string, append it
-				*p++ = c;
-			}
-		}
-		else
-		{
-			// everything else gets appended to the response body
-			*p++ = c;
-		}
-	}
+                // reset the pointer for the next header
+                p = header_buffer;
+            }
+            else
+            {
+                // otherwise, this is just part of a header string, append it
+                *p++ = c;
+            }
+        }
+        else
+        {
+            // everything else gets appended to the response body
+            *p++ = c;
+        }
+    }
 
-	// we're done, close the connection
-	client.stop();
-	
-	// clean up
-	free(host);
-	free(path);
+    // we're done, close the connection
+    client.stop();
+    
+    // clean up
+    free(host);
+    free(path);
 
-	return SUCCESS;
+    return SUCCESS;
 }
 
 int http_client::parse_url(const char* url, char* host, char* path)
 {
-	// first, validate the scheme, we only support http right now
-	if (strncmp(url, "http://", 7) != 0)
-		return BAD_URL;
-	
-	// extract the host name
-	const char* host_start = url + 7;
-	const char* host_end = strchr(host_start, '/');
-	if (host_end == NULL)
-	{
-		// there is no path, just copy the host from the url
-		strcpy(host, host_start);
-		strcpy(path, "/");
-	}
-	else
-	{
-		// there is a path, copy only up to the path
-		strncpy(host, host_start, host_end - host_start);
-		strcpy(path, host_end);
-	}
+    // first, validate the scheme, we only support http right now
+    if (strncmp(url, "http://", 7) != 0)
+        return BAD_URL;
+    
+    // extract the host name
+    const char* host_start = url + 7;
+    const char* host_end = strchr(host_start, '/');
+    if (host_end == NULL)
+    {
+        // there is no path, just copy the host from the url
+        strcpy(host, host_start);
+        strcpy(path, "/");
+    }
+    else
+    {
+        // there is a path, copy only up to the path
+        strncpy(host, host_start, host_end - host_start);
+        strcpy(path, host_end);
+    }
 
-	return SUCCESS;
+    return SUCCESS;
 }
 
 void http_client::append_header(const char* header)
 {
-	header_list* ph = (header_list*) malloc(sizeof(header_list));
-	size_t header_len = strlen(header);
-	ph->header = (char*) malloc(header_len + 1);
-	strcpy(ph->header, header);
-	ph->next = NULL;
-	if (request_headers == NULL)
-	{
-		request_headers = ph;
-	}
-	else
-	{
-		header_list* ph2 = request_headers;
-		while (ph2->next != NULL)
-			ph2 = ph2->next;
-		ph2->next = ph;
-	}
+    header_list* ph = (header_list*) malloc(sizeof(header_list));
+    size_t header_len = strlen(header);
+    ph->header = (char*) malloc(header_len + 1);
+    strcpy(ph->header, header);
+    ph->next = NULL;
+    if (request_headers == NULL)
+    {
+        request_headers = ph;
+    }
+    else
+    {
+        header_list* ph2 = request_headers;
+        while (ph2->next != NULL)
+            ph2 = ph2->next;
+        ph2->next = ph;
+    }
 }
 
 void http_client::free_headers()
 {
-	header_list* ph = request_headers;
-	while (ph != NULL)
-	{
-		free(ph->header);
-		header_list* next_header = ph->next;
-		free(ph);
-		ph = next_header;
-	}
-	request_headers = NULL;
+    header_list* ph = request_headers;
+    while (ph != NULL)
+    {
+        free(ph->header);
+        header_list* next_header = ph->next;
+        free(ph);
+        ph = next_header;
+    }
+    request_headers = NULL;
 }
 
