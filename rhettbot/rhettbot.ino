@@ -33,36 +33,46 @@ void setup() {
 
 void loop() {
     if (running) {
+        // read the IR pins
         int irLeft = irDetect(9, 10, 38000);
         int irRight = irDetect(2, 3, 38000);
 
         if (irLeft == 0 && irRight == 0) {
+            // both IRs are active, object directly in front
             backward(20);
         } else if (irLeft == 0) {
+            // object on left, turn right
             right(20);
         } else if (irRight == 0) {
+            // object on right, turn left
             left(20);
         } else {
+            // no object in sight, move forward
             forward(20);
         }
     }
 
+    // check if we've reached our time interval
     if (nextChange <= millis()) {
         if (running) {
+            // if bot is moving, stop it
             servoLeft.detach();
             servoRight.detach();
             running = false;
         } else {
+            // if bot is stopped, start it
             servoLeft.attach(13);
             servoRight.attach(12);
             running = true;
         }
 
+        // set up next time interval for start/stop
         nextChange = millis() + random(10, 20) * 1000;
     }
 }
 
 int irDetect(int irLedPin, int irReceiverPin, long frequency) {
+    // emit tone and read IR pin
     tone(irLedPin, frequency, 8);
     delay(1);
     int ir = digitalRead(irReceiverPin);
