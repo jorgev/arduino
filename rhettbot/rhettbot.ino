@@ -2,11 +2,13 @@
 
 #include <Servo.h>
 
+#define LEFT_CENTER 1500
+#define RIGHT_CENTER 1500
+#define PIEZO_PIN 4
+#define PIR_PIN 7
+
 Servo servoLeft, servoRight;
-unsigned long nextChange;
-bool running = true;
-int LEFT_STOP = 1500;
-int RIGHT_STOP = 1500;
+bool running = false;
 
 void setup() {
     // set up pins for input/output
@@ -14,24 +16,34 @@ void setup() {
     pinMode(3, INPUT);
     pinMode(9, OUTPUT);
     pinMode(2, OUTPUT);
+    pinMode(7, INPUT);
+    digitalWrite(PIR_PIN, LOW);
 
     // emit a sound to indicate start
-    tone(4, 1000, 300);
+    tone(PIEZO_PIN, 1000, 300);
     delay(300);
-    tone(4, 2000, 300);
+    tone(PIEZO_PIN, 2000, 300);
     delay(300);
-    tone(4, 3000, 300);
+    tone(PIEZO_PIN, 3000, 300);
     delay(300);
 
     // attach servos
     servoLeft.attach(13);
     servoRight.attach(12);
-
-    // set next change time
-    nextChange = millis() + random(10, 20) * 1000;
 }
 
 void loop() {
+    int pir = digitalRead(PIR_PIN);
+    if (pir == HIGH && !running) {
+        servoLeft.attach(13);
+        servoRight.attach(12);
+        running = true;
+    } else if (pir == LOW && running) {
+        servoLeft.detach();
+        servoRight.detach();
+        running = false;
+    }
+
     if (running) {
         // read the IR pins
         int irLeft = irDetect(9, 10, 38000);
@@ -51,24 +63,6 @@ void loop() {
             forward(20);
         }
     }
-
-    // check if we've reached our time interval
-    if (nextChange <= millis()) {
-        if (running) {
-            // if bot is moving, stop it
-            servoLeft.detach();
-            servoRight.detach();
-            running = false;
-        } else {
-            // if bot is stopped, start it
-            servoLeft.attach(13);
-            servoRight.attach(12);
-            running = true;
-        }
-
-        // set up next time interval for start/stop
-        nextChange = millis() + random(10, 20) * 1000;
-    }
 }
 
 int irDetect(int irLedPin, int irReceiverPin, long frequency) {
@@ -81,25 +75,25 @@ int irDetect(int irLedPin, int irReceiverPin, long frequency) {
 }
 
 void forward(int time) {
-    servoLeft.writeMicroseconds(LEFT_STOP + 200);
-    servoRight.writeMicroseconds(RIGHT_STOP - 200);
+    servoLeft.writeMicroseconds(LEFT_CENTER + 200);
+    servoRight.writeMicroseconds(RIGHT_CENTER - 200);
     delay(time);
 }
 
 void backward(int time) {
-    servoLeft.writeMicroseconds(LEFT_STOP - 200);
-    servoRight.writeMicroseconds(RIGHT_STOP + 200);
+    servoLeft.writeMicroseconds(LEFT_CENTER - 200);
+    servoRight.writeMicroseconds(RIGHT_CENTER + 200);
     delay(time);
 }
 
 void left(int time) {
-    servoLeft.writeMicroseconds(LEFT_STOP - 200);
-    servoRight.writeMicroseconds(RIGHT_STOP - 200);
+    servoLeft.writeMicroseconds(LEFT_CENTER - 200);
+    servoRight.writeMicroseconds(RIGHT_CENTER - 200);
     delay(time);
 }
 
 void right(int time) {
-    servoLeft.writeMicroseconds(LEFT_STOP + 200);
-    servoRight.writeMicroseconds(RIGHT_STOP + 200);
+    servoLeft.writeMicroseconds(LEFT_CENTER + 200);
+    servoRight.writeMicroseconds(RIGHT_CENTER + 200);
     delay(time);
 }
