@@ -3,19 +3,15 @@
 #include <Servo.h>
 
 Servo servoLeft, servoRight;
+unsigned long nextChange;
+bool running = true;
+int LEFT_STOP = 1500;
+int RIGHT_STOP = 1500;
 
 void setup() {
-    servoLeft.attach(13);
-    servoRight.attach(12);
-
-    // initialize to still
-    stop();
-
     // set up pins for input/output
     pinMode(10, INPUT);
     pinMode(3, INPUT);
-    pinMode(8, OUTPUT);
-    pinMode(7, OUTPUT);
     pinMode(9, OUTPUT);
     pinMode(2, OUTPUT);
 
@@ -26,14 +22,44 @@ void setup() {
     delay(300);
     tone(4, 3000, 300);
     delay(300);
+
+    // attach servos
+    servoLeft.attach(13);
+    servoRight.attach(12);
+
+    // set next change time
+    nextChange = millis() + random(10, 20) * 1000;
 }
 
 void loop() {
-    int irLeft = irDetect(9, 10, 38000);
-    int irRight = irDetect(2, 3, 38000);
+    if (running) {
+        int irLeft = irDetect(9, 10, 38000);
+        int irRight = irDetect(2, 3, 38000);
 
-    digitalWrite(8, !irLeft);
-    digitalWrite(7, !irRight);
+        if (irLeft == 0 && irRight == 0) {
+            backward(20);
+        } else if (irLeft == 0) {
+            right(20);
+        } else if (irRight == 0) {
+            left(20);
+        } else {
+            forward(20);
+        }
+    }
+
+    if (nextChange <= millis()) {
+        if (running) {
+            servoLeft.detach();
+            servoRight.detach();
+            running = false;
+        } else {
+            servoLeft.attach(13);
+            servoRight.attach(12);
+            running = true;
+        }
+
+        nextChange = millis() + random(10, 20) * 1000;
+    }
 }
 
 int irDetect(int irLedPin, int irReceiverPin, long frequency) {
@@ -45,30 +71,25 @@ int irDetect(int irLedPin, int irReceiverPin, long frequency) {
 }
 
 void forward(int time) {
-    servoLeft.writeMicroseconds(1700);
-    servoRight.writeMicroseconds(1300);
+    servoLeft.writeMicroseconds(LEFT_STOP + 200);
+    servoRight.writeMicroseconds(RIGHT_STOP - 200);
     delay(time);
 }
 
 void backward(int time) {
-    servoLeft.writeMicroseconds(1300);
-    servoRight.writeMicroseconds(1700);
+    servoLeft.writeMicroseconds(LEFT_STOP - 200);
+    servoRight.writeMicroseconds(RIGHT_STOP + 200);
     delay(time);
 }
 
-void turnLeft(int time) {
-    servoLeft.writeMicroseconds(1300);
-    servoRight.writeMicroseconds(1300);
+void left(int time) {
+    servoLeft.writeMicroseconds(LEFT_STOP - 200);
+    servoRight.writeMicroseconds(RIGHT_STOP - 200);
     delay(time);
 }
 
-void turnRight(int time) {
-    servoLeft.writeMicroseconds(1700);
-    servoRight.writeMicroseconds(1700);
+void right(int time) {
+    servoLeft.writeMicroseconds(LEFT_STOP + 200);
+    servoRight.writeMicroseconds(RIGHT_STOP + 200);
     delay(time);
-}
-
-void stop() {
-    servoLeft.writeMicroseconds(1500);
-    servoRight.writeMicroseconds(1500);
 }
