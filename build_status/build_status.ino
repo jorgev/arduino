@@ -13,13 +13,12 @@
 #define IR_RECV     2
 #define NEAR_DISTANCE_COUNT 10
 #define FAR_DISTANCE_COUNT 100
-#define BIN1        1000
-#define BIN0        400
 
 byte mac[] = { 0x90, 0xA2, 0xDA, 0x00, 0x8E, 0xC1 };
-byte ip[] = { 172, 22, 4, 120 };
-byte gateway[] = { 172, 22, 0, 1 };
-byte subnet[] = { 255, 255, 0, 0 };
+IPAddress ip(172, 22, 4, 120);
+IPAddress devdns(172, 22, 1, 1);
+IPAddress gateway(172, 22, 0, 1);
+IPAddress subnet(255, 255, 0, 0);
 EthernetServer server(80);
 int near_count = NEAR_DISTANCE_COUNT;
 int far_count = FAR_DISTANCE_COUNT;
@@ -36,8 +35,12 @@ char* shesaid = "2:-W\"N/1\"E3\"WW''5";
 char* yousaid = "Q?\"WW''5\",\"-\"0::+";
 char* jesus = "X/U<77A3\"H//IWW\"N,=\"2//\"*3K/W";
 char* notapussy = "9''WW\"\"\"8&\":0\"77MWWU\"X88-\"4\")//WW4";
+char* chill = "R,Med";
+char* mofo = "0//2:S\"H//IS";
+char* mumbler = "0//0MS";
+char* huge = "Q?dddddd*";
 
-void send_response(EthernetClient& client, int status_code, char* body);
+void send_response(EthernetClient& client, int status_code);
 void say_message(const char* pb);
 void set_bits(byte data);
 
@@ -45,7 +48,7 @@ void setup() {
     Serial.begin(9600);
 
     // set up ethernet
-    Ethernet.begin(mac, ip, gateway, subnet);
+    Ethernet.begin(mac, ip, devdns, gateway, subnet);
     server.begin();
     Serial.print("server is at ");
     Serial.println(Ethernet.localIP());
@@ -53,11 +56,11 @@ void setup() {
     // designate the input/output pins
     pinMode(STROBE, OUTPUT);
     pinMode(LRQ, INPUT);
-    pinMode(3, OUTPUT);
-    pinMode(4, OUTPUT);
-    pinMode(5, OUTPUT);
-    pinMode(6, OUTPUT);
-    pinMode(7, OUTPUT);
+    pinMode(DATA, OUTPUT);
+    pinMode(STAGE, OUTPUT);
+    pinMode(FAR, OUTPUT);
+    pinMode(NEAR, OUTPUT);
+    pinMode(PING, OUTPUT);
     pinMode(IR_RECV, INPUT);
 
     // set strobe high, we will monitor on it for sending data
@@ -76,7 +79,7 @@ void loop() {
         int chunked_size = -1;
         int chunked_count = 0;
         int content_length = -1;
-        int status_code = 200;
+        int status_code = 204;
         while (client.connected()) {
             if (client.available()) {
                 char ch = client.read();
@@ -88,15 +91,15 @@ void loop() {
                         
                         if (request_line) {
                             // this is the very first line
-                            if (strncmp(buf, "POST", 4) != 0) {
+                            if (strncasecmp(buf, "POST", 4) != 0) {
                                 status_code = 405;
                             }
                             request_line = false;
                         } else {
                             // the content length is probably the most important header
-                            if (strncmp(buf, "Content-Length: ", 16) == 0) {
+                            if (strncasecmp(buf, "Content-Length: ", 16) == 0) {
                                 content_length = atoi(buf + 16);
-                            } else if (strncmp(buf, "Transfer-Encoding: ", 19) == 0) {
+                            } else if (strncasecmp(buf, "Transfer-Encoding: ", 19) == 0) {
                                 // assume chunked, not sure if there is another valid value
                                 chunked = true;
                             }
@@ -107,7 +110,7 @@ void loop() {
                                 
                                 // if content length is 0, nothing left to do
                                 if (content_length == 0) {
-                                    send_response(client, status_code, NULL);
+                                    send_response(client, status_code);
                                     break;
                                 }
                             }
@@ -130,7 +133,7 @@ void loop() {
                         }
                     } else if (--content_length == 0) {
                         // send the response and break out of the receive loop
-                        send_response(client, status_code, NULL);
+                        send_response(client, status_code);
                         break;
                     }
                 }
@@ -213,6 +216,7 @@ void loop() {
         }
 
         // do something based on the code received
+        Serial.println(result, HEX);
         switch (result) {
             case 0x80: // #1
                 say_message(djeat);
@@ -234,6 +238,10 @@ void loop() {
                 say_message(hammer);
                 break;
 
+            case 0x86: // #7
+                say_message(chill);
+                break;
+
             case 0x88: // #9
                 say_message(shesaid);
                 break;
@@ -250,40 +258,33 @@ void loop() {
                 break;
 
             default:
-                Serial.print("Unhandled code: ");
-                Serial.println(result, HEX);
+                Serial.println("No handler for code");
                 break;
         }
     }
 
     // check for data on the serial port
     if (Serial.available()) {
-        int ch = Serial.read();
-        //Serial.write(ch);
-        if (ch == 'r')
-            say_message(last_message);
+        char ch = Serial.read();
+        if (ch == '\r' || ch == '\n') {
+            Serial.println();
+        } else {
+            Serial.print(ch); // echo to sender
+        }
     }
 }
 
-void send_response(EthernetClient& client, int status_code, char* body)
+void send_response(EthernetClient& client, int status_code)
 {
     // send the appropriate response
-    if (status_code == 200) {
-        client.println("HTTP/1.1 200 OK");
+    if (status_code == 204) {
+        client.println("HTTP/1.1 204 No Content");
     } else if (status_code == 405) {
         client.println("HTTP/1.1 405 Method Not Allowed");
     }
-    client.println("Server: arduino/1.0");
-    int content_length = 0;
-    if (body != NULL)
-        content_length = strlen(body);
-    client.print("Content-Length: ");
-    client.println(content_length);
+    client.println("Server: buildbot/1.0");
+    client.println("Content-Length: 0");
     client.println();
-
-    // send the body, if we have one
-    if (body != NULL) {
-    }
 
     // sample code indicates we need this
     delay(1);
